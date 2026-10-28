@@ -1,0 +1,15 @@
+[Unit]
+Description=TRex GUI backend
+After=network-online.target
+
+[Service]
+@USER_LINE@
+WorkingDirectory=@PREFIX@/backend
+ExecStart=@PREFIX@/.venv/bin/python -m trex_gui -c @PREFIX@/config.yaml
+Restart=on-failure
+RestartSec=5
+# CPU pinning is set in config.yaml (server.cpu_affinity) rather than here,
+# so it also applies when the backend is started by hand.
+
+[Install]
+WantedBy=@WANTED_BY@

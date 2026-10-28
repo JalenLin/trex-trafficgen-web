@@ -1,0 +1,12 @@
+config.yaml
+backend/.venv/
+backend/*.egg-info/
+__pycache__/
+frontend/node_modules/
+frontend/dist/
+dist/
+bench/gui.log
+bench/gui-*.yaml
+bench/results.jsonl
+data/
+*.log

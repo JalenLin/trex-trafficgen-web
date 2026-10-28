@@ -1,0 +1,27 @@
+[project]
+name = "trex-gui"
+version = "0.1.0"
+description = "Web GUI for Cisco TRex stateless traffic generator"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+authors = [{ name = "Jalen Lin" }]
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+# Mock hosts build packets with pip's Scapy. Real TRex hosts use the Scapy
+# bundled with TRex, so this is not part of the deploy bundle.
+mock = ["scapy>=2.6,<2.7"]
+
+[project.scripts]
+trex-gui = "trex_gui.__main__:main"
+
+[build-system]
+requires = ["setuptools>=77"]  # SPDX license expression (PEP 639)
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["trex_gui"]

@@ -1,0 +1,37 @@
+server:
+  # 127.0.0.1 = only this machine. Binding 0.0.0.0 exposes traffic control to
+  # the whole network and there is no login yet; prefer an SSH tunnel.
+  host: 127.0.0.1
+  port: 8080
+  # Seconds between stats polls per host (shared by all viewers). Minimum 0.5:
+  # every poll is RPC work on the TRex master thread (bench/README.md).
+  stats_interval: 1.0
+  # Where stream definitions are saved (default: data/ next to this file).
+  # data_dir: data
+  # Required when the backend runs on the TRex machine itself: CPUs the backend
+  # may use. Use TRex's master_thread_id from /etc/trex_cfg.yaml, never a
+  # data-plane or latency core. See docs/deployment.md.
+  # cpu_affinity: [0]
+  # TRex Python profiles are listed from <trex>/stl and <data_dir>/profiles.
+  # Uploading them from the web page runs Python code on this machine and there
+  # is no login yet, so it is off; copy profiles into data/profiles over SSH.
+  # allow_profile_upload: false
+
+hosts:
+  # A fake host, for trying the GUI without TRex (needs: pip install -e 'backend[mock]').
+  - id: demo
+    name: Demo (mock)
+    mock: true
+    mock_ports: 16
+
+  # A real TRex server. client_path must come from the same TRex release the
+  # server runs: copy <trex-dir>/automation/trex_control_plane/interactive
+  # together with <trex-dir>/external_libs, or point at the TRex install itself.
+  # - id: lab-a
+  #   name: Lab A
+  #   server: 192.0.2.10
+  #   sync_port: 4501
+  #   async_port: 4500
+  #   username: trex-gui
+  #   client_path: /opt/trex/v3.06/automation/trex_control_plane/interactive
+  #   # ext_libs_path: /opt/trex/v3.06/external_libs   # only if not found automatically
