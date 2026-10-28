@@ -61,6 +61,8 @@
 ### 欄位變化（field engine）
 讓欄位逐封包變化：遞增、遞減或隨機，可以設定範圍和步進，也支援 VLAN ID、MPLS label 這類 bit 欄位。checksum 會自動重算。
 
+TRex 會把一個 stream 分給多個核心送出，所以線路上的值不會嚴格照順序，但範圍內每個值送出的次數相同。例如 5 個值、送 100 個封包，每個值剛好 20 次。可變長度也是如此。
+
 ### 傳送
 - **模式**：連續、單次 burst、多次 burst。
 - **速率**：pps、bps（L1 或 L2）、線速百分比。
@@ -105,6 +107,9 @@ Streams 分頁的「**複製到其他 port…**」可以把整組 streams 複製
 ## 7. Port 設定
 
 - **L2 / L3**、VLAN（最多兩層 QinQ）、IPv6、promiscuous、multicast、flow control、link up/down。網卡不支援的項目不會顯示。
+  - IPv6 需要 TRex 使用 `stack: linux_based`，預設的 legacy stack 會回「IPv6 is not supported with current stack」。
+  - 有些網卡會接受 flow control 設定卻沒有真的套用（實測 X557 / ixgbe），這時畫面會提示「網卡沒有套用 flow control 設定」。
+  - 使用 `stack: linux_based` 時，TRex 的 port 只在 service mode 才會回應 ARP；兩個 TRex port 互為 gateway 時，當作 gateway 的那個 port 要先開 service mode。
 - **批次套用**：VLAN、IPv6 開關、promiscuous、multicast、flow control 可以一次套到其他勾選的 port。MAC、IP、gateway 每個 port 不同，所以不會批次套用。
 - **Ping**：從 port 送 ping，確認路徑通不通。
 - **設定檔**：把多個 port 的 L2/L3 設定整組存起來（存在後端、依主機分開），套用前會列出每個 port 會怎麼變。
@@ -210,6 +215,7 @@ Streams 分頁的「**複製到其他 port…**」可以把整組 streams 複製
 | 擷取不到 stream 的封包 | 擷取時要勾選「Service mode」 |
 | 統計的 RX 比 TX 少一點 | 送流中清除統計造成的誤差，或封包還在路上。請停止送流後再比對 |
 | pg / Latency 沒資料 | stream 的「傳送」設定裡沒有開啟封包統計或 Latency |
+| pg / Latency 只有 TX，RX 一直是 0，但 port 的 RX 計數正常 | 部分網卡上 TRex 不計算 flow 統計與 latency 的接收（實測 e300 的 X557 / ixgbe，用 TRex 自己的 client 也一樣）。請改用 port 計數比對 |
 | 畫面顯示未連線 | TRex 沒在執行，或 GUI 後端連不到 TCP 4501 / 4500。畫面上會顯示原因 |
 | Namespace 顯示需要 `stack: linux_based` | 需要修改 TRex 的 `trex_cfg.yaml` 並重啟 TRex，這會影響所有使用者，請先和管理員確認 |
 

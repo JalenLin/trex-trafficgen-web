@@ -1,5 +1,5 @@
 // Typed client for the backend REST/WebSocket API (backend/trex_gui/app.py).
-import { t } from './i18n'
+import { t, type Coded } from './i18n'
 
 export interface HostSummary {
   id: string
@@ -544,9 +544,9 @@ export const api = {
     request<PortInfo[]>('POST', `${host(id)}/traffic/update`, { ports, mult }),
 
   portConfig: (id: string, port: number, cfg: PortConfig) =>
-    request<{ ports: PortInfo[]; warnings: string[] }>('POST', `${host(id)}/ports/${port}/config`, cfg),
+    request<{ ports: PortInfo[]; warnings: Coded[] }>('POST', `${host(id)}/ports/${port}/config`, cfg),
   resolve: (id: string, ports: number[]) =>
-    request<{ ports: PortInfo[]; warnings: string[] }>('POST', `${host(id)}/ports/resolve`, { ports }),
+    request<{ ports: PortInfo[]; warnings: Coded[] }>('POST', `${host(id)}/ports/resolve`, { ports }),
   getPortProfiles: (id: string) => request<PortProfilesDoc>('GET', `${host(id)}/port-profiles`),
   putPortProfiles: (id: string, doc: PortProfilesDoc) => request<PortProfilesDoc>('PUT', `${host(id)}/port-profiles`, doc),
   listPcaps: () => request<PcapMeta[]>('GET', '/pcaps'),

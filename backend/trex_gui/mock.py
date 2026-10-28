@@ -14,6 +14,8 @@ import re
 import time
 import zlib
 
+from .worker import port_warning
+
 OTHER_USER = "lab-user"
 LINE_OVERHEAD = 8 + 12  # preamble/SFD + inter-frame gap, bytes
 
@@ -174,7 +176,7 @@ class MockAdapter:
             layer.update(arp="resolved", dst_mac=self._gw_mac(port))
             return []
         layer["arp"] = "unresolved"
-        return [f"port {port}: gateway {layer['ipv4_dst']} did not answer ARP; traffic will not start until it resolves"]
+        return [port_warning("arpUnresolved", port=port, gateway=layer["ipv4_dst"])]
 
     def op_resolve(self, ports):
         self._require_connected()

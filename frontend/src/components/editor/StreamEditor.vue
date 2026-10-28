@@ -108,6 +108,8 @@ function close() {
   emit('update:show', false)
 }
 
+// Bumped on every open so the preview rebuilds even when the packet is unchanged.
+const opened = ref(0)
 watch(
   () => props.show,
   async (open) => {
@@ -118,6 +120,7 @@ watch(
     selected.value = 0
     saveError.value = null
     preview.value = null
+    opened.value++
     const saved = loadPref<Draft | null>(draftKey.value, null)
     pendingDraft.value = saved && JSON.stringify(normalize(clone(saved.stream))) !== baseline ? saved : null
     await Promise.all(draft.value.packet.layers.map((l) => loadSchema(l.proto)))
@@ -264,7 +267,7 @@ function previewPacket(s: StreamSpec) {
 let timer: ReturnType<typeof setTimeout> | undefined
 let seq = 0
 watch(
-  () => (draft.value ? JSON.stringify({ packet: previewPacket(draft.value), fs: draft.value.flow_stats }) : ''),
+  () => (draft.value ? JSON.stringify({ packet: previewPacket(draft.value), fs: draft.value.flow_stats, opened: opened.value }) : ''),
   (key) => {
     clearTimeout(timer)
     if (!key) return

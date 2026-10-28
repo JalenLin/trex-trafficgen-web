@@ -282,6 +282,8 @@ def _api_router() -> APIRouter:
     async def port_config(host_id: str, port: int, body: PortConfigRequest, request: Request):
         if body.l2 and body.l3:
             raise BadRequest("choose either L2 or L3, not both")
+        if body.flow_ctrl not in (None, 0, 1, 2, 3):
+            raise BadRequest("flow_ctrl must be 0 (none), 1 (tx), 2 (rx) or 3 (full)")
         cfg = body.model_dump(exclude_none=True)
         return await act(request, host_id, "portConfig", "port_config", {"ports": [port], "items": ", ".join(cfg)},
                          port=port, **cfg)

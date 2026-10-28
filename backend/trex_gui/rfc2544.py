@@ -293,6 +293,7 @@ class Rfc2544Job:
     async def run(self, session, on_end):
         c = self.config
         txs = sorted({p for d in c.directions() for p in d})
+        final, error = "error", "interrupted"
         try:
             ports = {p["id"]: p for p in await session.call("ports")}
             missing = [p for p in txs if p not in ports or not ports[p]["acquired"]]
@@ -313,21 +314,22 @@ class Rfc2544Job:
                     self.results["frame_loss"].append(await self._frame_loss(session, size))
                 if "back_to_back" in c.tests:
                     self.results["back_to_back"].append(await self._back_to_back(session, size))
-            self.state = "done"
-            self.note("done")
+            final, error = "done", None
         except asyncio.CancelledError:
-            self.state = "stopped"
-            self.note("stopped")
+            final, error = "stopped", None
         except Exception as e:
-            self.state, self.error = "error", str(e)
-            self.note("error", error=str(e))
+            final, error = "error", str(e)
         finally:
-            self.finished = time.time()
             self.progress = {}
             try:
                 await session.call("stop", ports=txs)
             except Exception:
                 pass
+            # Only now, with traffic stopped and the result saved, does the run end for
+            # viewers: "done" before that showed a run missing from the history.
+            self.finished = time.time()
+            self.state, self.error = final, error
+            self.note(final, **({"error": error} if error else {}))
             on_end(self)
 
 

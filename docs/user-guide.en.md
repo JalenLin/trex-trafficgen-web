@@ -61,6 +61,8 @@ If you change the streams of a port that is transmitting, press Start again for 
 ### Field engine
 Make a field change from packet to packet: increment, decrement or random, with a range and step. Bit fields such as VLAN ID and MPLS label are supported. Checksums are recomputed automatically.
 
+TRex spreads a stream over several cores, so the values on the wire are not strictly in order, but every value in the range is sent the same number of times. For example, 5 values over 100 packets gives exactly 20 of each. The same holds for a varying frame size.
+
 ### Transmit
 - **Mode**: continuous, single burst, multi-burst.
 - **Rate**: pps, bps (L1 or L2), or % of line rate.
@@ -105,6 +107,9 @@ If you clear stats while traffic is running, TX and RX are not reset at exactly 
 ## 7. Port settings
 
 - **L2 / L3**, VLAN (up to two tags, QinQ), IPv6, promiscuous, multicast, flow control, link up/down. Items the NIC doesn't support are hidden.
+  - IPv6 needs TRex's `stack: linux_based`; the default legacy stack answers "IPv6 is not supported with current stack".
+  - Some NICs accept a flow control setting without applying it (seen on X557 / ixgbe); the page then says the NIC didn't apply it.
+  - With `stack: linux_based`, TRex ports answer ARP only in service mode. When two TRex ports are each other's gateway, put the port acting as the gateway into service mode first.
 - **Apply to other ports**: VLAN, IPv6 on/off, promiscuous, multicast and flow control can be applied to the other selected ports at once. MAC, IP and gateway differ per port, so they are never applied in bulk.
 - **Ping**: send pings from the port to check the path.
 - **Port profiles**: save the L2/L3 settings of several ports as a set (on the backend, per host). Before applying, the GUI lists how each port will change.
@@ -210,6 +215,7 @@ The location of `data/` is set by `server.data_dir` in `config.yaml`; the defaul
 | Stream traffic doesn't show up in a capture | Tick **Service mode** when capturing |
 | RX is slightly lower than TX in Stats | Stats were cleared while traffic was running, or packets were still in flight. Compare after stopping traffic |
 | pg / Latency is empty | The stream's Transmit settings don't have flow stats or latency turned on |
+| pg / Latency shows TX but RX stays 0, while the port's RX counter is fine | On some NICs TRex doesn't count flow stats or latency on receive (seen on e300's X557 / ixgbe, also with TRex's own client). Compare port counters instead |
 | The host shows as disconnected | TRex isn't running, or the backend can't reach TCP 4501 / 4500. The reason is shown on screen |
 | Namespace says it needs `stack: linux_based` | TRex's `trex_cfg.yaml` must be changed and TRex restarted. This affects every user, so check with the administrator first |
 

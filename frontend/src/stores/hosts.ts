@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { api, type HostSummary, type PortConfig, type PortInfo } from '../api'
+import { codedText } from '../i18n'
 import { persisted } from '../utils/prefs'
 
 export type TrafficAction = 'start' | 'stop' | 'pause' | 'resume' | 'reset'
@@ -89,17 +90,17 @@ export const useHostsStore = defineStore('hosts', () => {
     setPorts(id, await api.update(id, portIds, mult))
   }
 
-  /** Returns warnings (e.g. gateway did not answer ARP); errors throw. */
+  /** Returns warnings (e.g. gateway did not answer ARP) in the UI language; errors throw. */
   async function configurePort(id: string, port: number, cfg: PortConfig): Promise<string[]> {
     const r = await api.portConfig(id, port, cfg)
     setPorts(id, r.ports)
-    return r.warnings
+    return r.warnings.map((w) => codedText(w, 'ports.warn'))
   }
 
   async function resolve(id: string, portIds: number[]): Promise<string[]> {
     const r = await api.resolve(id, portIds)
     setPorts(id, r.ports)
-    return r.warnings
+    return r.warnings.map((w) => codedText(w, 'ports.warn'))
   }
 
   return {

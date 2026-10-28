@@ -662,11 +662,12 @@ class Catalog:
         the end of the packet (IPv4 total length, IPv6 payload length, UDP length)."""
         lo, hi, init = _size_var(size)
         var = "fv_size"
-        # split=False: every DP core walks the whole size sequence itself. With TRex's
-        # default split, core k starts k steps in and jumps step*cores, and the wrap
-        # past max lands between the grid points (sizes the user never asked for).
+        # TRex's default split: core k starts k steps in and jumps step*cores. The range
+        # from _size_var is a whole number of steps, so the wrap stays on the grid. (Not
+        # splitting makes every core repeat the same sequence: a burst then gets the
+        # first sizes many times and never the last ones.)
         plan = [{"type": "var", "name": var, "size": 2, "op": size["mode"], "min": lo, "max": hi,
-                 "step": int(size.get("step") or 1), "init": init, "split": False},
+                 "step": int(size.get("step") or 1), "init": init},
                 {"type": "trim", "var": var}]
         for layer in desc["layers"]:
             field = {"IP": "len", "IPv6": "plen", "UDP": "len"}.get(layer["name"])

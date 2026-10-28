@@ -87,8 +87,9 @@ async function apply() {
 </script>
 
 <template>
-  <NModal :show="show" @update:show="(v: boolean) => emit('update:show', v)">
-    <NCard v-if="profile" style="width: min(720px, 94vw)" :title="t('portprofiles.dialogTitle', { name: profile.name })" size="small" :bordered="false">
+  <!-- v-if on the modal, not the card: a deleted profile would leave the modal with an empty slot. -->
+  <NModal v-if="profile" :show="show" @update:show="(v: boolean) => emit('update:show', v)">
+    <NCard style="width: min(720px, 94vw)" :title="t('portprofiles.dialogTitle', { name: profile.name })" size="small" :bordered="false">
       <NSpace vertical>
         <div v-for="r in rows" :key="r.pid" class="row">
           <NText strong>Port {{ r.pid }}</NText>

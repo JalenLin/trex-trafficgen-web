@@ -63,6 +63,7 @@ function reset() {
     flow_ctrl: l.flow_ctrl ?? 0,
   })
 }
+const pings = ref<PingRecord[]>([])
 watch(portId, () => {
   reset()
   pings.value = []
@@ -185,7 +186,6 @@ const pingTarget = computed({
   set: (v: string) => (pingTargets.value[`${props.hostId}:${portId.value}`] = v),
 })
 const pingCount = persisted('pingCount', 3)
-const pings = ref<PingRecord[]>([])
 const pinging = ref(false)
 async function ping() {
   if (portId.value === null) return

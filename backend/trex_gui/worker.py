@@ -166,6 +166,7 @@ class TRexAdapter:
         if idle:
             c.remove_all_streams(ports=idle)
         c.release(ports=ports)
+        self._forget_streams(ports)
         return self.op_ports()
 
     def op_clear_stats(self, ports=None):
@@ -244,21 +245,31 @@ class TRexAdapter:
                     # The address is set even when ARP fails; report, don't fail.
                     if "resolve" not in str(e).lower():
                         raise
-                    warnings.append(f"port {port}: gateway {l3['dst']} did not answer ARP; traffic will not start until it resolves")
+                    warnings.append(port_warning("arpUnresolved", port=port, gateway=l3["dst"]))
             if ipv6 is not None:
                 c.conf_ipv6(port, enabled=bool(ipv6.get("enabled")), src_ipv6=ipv6.get("src") or None)
         if any(v is not None for v in (promiscuous, multicast, link_up, flow_ctrl)):
             c.set_port_attr(ports=[port], promiscuous=promiscuous, multicast=multicast, link_up=link_up, flow_ctrl=flow_ctrl)
-        return {"ports": self.op_ports(), "warnings": warnings}
+        ports = self.op_ports()
+        # Some NICs (e.g. X557 on ixgbe) accept the setting but keep reporting the old mode.
+        got = next(p for p in ports if p["id"] == port)["layer"]["flow_ctrl"]
+        if flow_ctrl is not None and got is not None and got != flow_ctrl:
+            warnings.append(port_warning("flowCtrlNotApplied", port=port))
+        return {"ports": ports, "warnings": warnings}
 
     def op_resolve(self, ports):
-        warnings = []
+        warnings, error = [], None
         with self._service(ports):
             try:
                 self._client.resolve(ports=ports, retries=2)
             except Exception as e:
-                warnings.append(str(e))
-        return {"ports": self.op_ports(), "warnings": warnings}
+                error = str(e)
+        result = self.op_ports()
+        unresolved = [p for p in result if p["id"] in ports and p["layer"]["arp"] == "unresolved"]
+        warnings += [port_warning("arpUnresolved", port=p["id"], gateway=p["layer"]["ipv4_dst"]) for p in unresolved]
+        if error and not unresolved:
+            warnings.append({"code": None, "params": {}, "message": error})  # TRex's own text
+        return {"ports": result, "warnings": warnings}
 
     def op_ping(self, port, dst_ip, count=3, pkt_size=64):
         with self._service([port]):
@@ -459,6 +470,7 @@ class TRexAdapter:
         for port in ports:
             c.remove_all_streams(ports=[port])
             c.add_streams(built[port], ports=[port])
+            self._forget_streams([port])
         c.start(ports=ports, mult=mult, force=force, duration=duration)
         return {"ports": self.op_ports(), "streams": {p: len(s) for p, s in built.items()}}
 
@@ -470,6 +482,7 @@ class TRexAdapter:
         if active:
             c.stop(ports=active)
         c.remove_all_streams(ports=ports)
+        self._forget_streams(ports)
         # pg / latency / global counters are shared with other ports: leave them.
         c.clear_stats(ports=ports, clear_global=False, clear_flow_stats=False, clear_latency_stats=False)
         service = [p for p in ports if c.get_port(p).is_service_mode_on()]
@@ -497,6 +510,7 @@ class TRexAdapter:
             c.stop(ports=active)
         kw = dict(ports=ports, ipg_usec=ipg_usec, speedup=speedup, count=count, duration=duration,
                   min_ipg_usec=min_ipg_usec, src_mac_pcap=src_mac_pcap, dst_mac_pcap=dst_mac_pcap, force=force)
+        self._forget_streams(ports)  # a replay replaces the port's streams on TRex
         if remote:
             c.push_remote(path, **kw)  # TRex reads the file itself: any size
         else:
@@ -531,6 +545,34 @@ class TRexAdapter:
             self._restore_service(self._capture_service.pop(capture_id, {}))
         return [(p["ts"], p["binary"]) for p in packets or []]
 
+    def _forget_streams(self, ports):
+        """The GUI's streams are no longer what's on TRex for these ports."""
+        for p in ports:
+            self._stream_ids.pop(p, None)
+            self._paused.pop(p, None)
+
+    def heal_port_states(self):
+        """Work around a TRex client inconsistency, checked before every op.
+
+        After a pcap replay on an acquired port, the client sometimes marks the port
+        idle but leaves its profile "active". stop() then skips the port as idle, while
+        remove_all_streams, port config and reset refuse it ("port(s) [0._]: are active"),
+        so the port is stuck until released. Port.sync() can't fix it: the client drops
+        the server's IDLE profile state (STATE_IDLE is 0 and its setter ignores falsy
+        states). A forced stop of that profile sets it back. The check is client-side;
+        the RPC only happens when the state is stale."""
+        c = self._client
+        if not c.is_connected():
+            return
+        for pid in c.get_acquired_ports():
+            port = c.ports[pid]
+            if port.is_active():
+                continue
+            active = (port.STATE_TX, port.STATE_PAUSE, port.STATE_PCAP_TX)
+            for profile_id, state in list(getattr(port, "profile_state_list", {}).items()):
+                if state in active:
+                    port.stop(force=True, profile_id=profile_id)
+
     def close(self):
         try:
             self.op_disconnect()
@@ -541,6 +583,15 @@ class TRexAdapter:
 def _num(v):
     # TRex fills missing values with StatNotAvailable objects.
     return v if isinstance(v, numbers.Number) else None
+
+
+def port_warning(code: str, **params) -> dict:
+    """A port-setting warning the UI translates (locales/ports.ts warn.<code>); message is the English fallback."""
+    text = {
+        "arpUnresolved": "Port {port}: gateway {gateway} did not answer ARP; traffic can't start until it resolves",
+        "flowCtrlNotApplied": "Port {port}: the NIC did not apply the flow control setting",
+    }[code]
+    return {"code": code, "params": params, "message": text.format(**params)}
 
 
 def pg_summary(flow_stats: dict, latency: dict) -> dict:
@@ -615,6 +666,8 @@ def run(conn, cfg: dict):
                 break
             try:
                 fn = getattr(adapter, "op_" + msg["op"])
+                if hasattr(adapter, "heal_port_states"):
+                    adapter.heal_port_states()
                 result = fn(**(msg.get("args") or {}))
                 conn.send({"id": msg["id"], "ok": True, "result": result})
             except Exception as e:

@@ -79,6 +79,11 @@ const zh = {
   arpResolveOk: 'ARP 解析成功',
   arpResolved: '已解析 → {mac}',
   arpUnresolved: '未解析（gateway 沒有回應 ARP）',
+  // Warnings sent by the backend as a code + params.
+  warn: {
+    arpUnresolved: 'Port {port}：gateway {gateway} 沒有回應 ARP，解析成功前無法送流',
+    flowCtrlNotApplied: 'Port {port}：網卡沒有套用 flow control 設定（TRex 讀回的模式沒有改變），這張網卡可能不支援從 TRex 調整',
+  },
   pingDefaultGateway: '預設 ping gateway {ip}',
   pingDstIp: '目的 IP',
   pingSummary: '{ok}/{total} 個回應',
@@ -175,6 +180,10 @@ const en: typeof zh = {
   arpResolveOk: 'ARP resolved',
   arpResolved: 'Resolved → {mac}',
   arpUnresolved: "Unresolved (gateway didn't answer ARP)",
+  warn: {
+    arpUnresolved: "Port {port}: gateway {gateway} didn't answer ARP; traffic can't start until it resolves",
+    flowCtrlNotApplied: "Port {port}: the NIC didn't apply the flow control setting (TRex still reports the old mode); this NIC may not support changing it through TRex",
+  },
   pingDefaultGateway: 'Default: ping gateway {ip}',
   pingDstIp: 'Destination IP',
   pingSummary: '{ok}/{total} replies',
