@@ -81,7 +81,7 @@ Add a host to `config.yaml` with `client_path` pointing to `automation/trex_cont
 ```bash
 cd frontend
 npm run build                     # type check (vue-tsc) + build into frontend/dist/
-npx tsx scripts/check-i18n.ts     # check every UI message's syntax and that zh-TW and en have the same keys
+npm run check:i18n     # check every UI message's syntax and that zh-TW and en have the same keys
 ```
 
 - The type check in `npm run build` catches a key missing from English.
@@ -177,7 +177,7 @@ Taking "a new operation on a port" as the example:
 4. **`frontend/src/api.ts`**: add the types and the call.
 5. **Components**: use it in `components/`.
 6. **`frontend/src/locales/`**: all visible text goes here, in both `zh` and `en`. A key missing from English fails the type check.
-7. **Check**: run `npm run build` and `npx tsx scripts/check-i18n.ts`, then try it on a mock host. For anything that touches TRex behavior, test it on a real TRex as well; the mock can't reproduce the exact return formats of the TRex client.
+7. **Check**: run `npm run build` and `npm run check:i18n`, then try it on a mock host. For anything that touches TRex behavior, test it on a real TRex as well; the mock can't reproduce the exact return formats of the TRex client.
 
 Design rules:
 - **Features that send extra requests to TRex are off by default.** Make them an option the user turns on, with a warning, because every request is handled by the TRex master thread. Only features that add no requests are shown by default.
@@ -188,9 +188,11 @@ Design rules:
 
 ## 7. Testing
 
-There is no automated test suite yet. Changes are verified with:
+How to run the tests is in [tests/README.en.md](../tests/README.en.md):
 
-- **Type check and UI text**: `npm run build`, `npx tsx scripts/check-i18n.ts`.
-- **Mock hosts**: every screen and flow can be exercised on a mock host.
-- **A real TRex**: cable two ports into a loopback (directly, or in an isolated VLAN on a switch), send traffic through the GUI's API and compare the stats.
+- **Type check and UI text**: `npm run build`, `npm run check:i18n`.
+- **Backend API tests** (`tests/backend`, pytest): every API, against a mock host or a real TRex with a cabled loopback.
+- **Browser end-to-end tests** (`tests/e2e`, Playwright): every screen on mock hosts, in both languages; any console error is a failure.
+- **GitHub Actions**: every push and pull request runs the mock-based parts of the above (`.github/workflows/test.yml`).
+- **A real TRex**: needs a cabled loopback, so run the backend tests by hand; for changes that touch TRex behavior, run them on real hardware before sending.
 - **Performance impact**: the scripts in `bench/`; see [bench/README.en.md](../bench/README.en.md).

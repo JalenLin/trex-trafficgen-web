@@ -81,7 +81,7 @@ hosts:
 ```bash
 cd frontend
 npm run build                     # 型別檢查（vue-tsc）+ 建置到 frontend/dist/
-npx tsx scripts/check-i18n.ts     # 檢查所有介面文字的語法、繁中與英文的 key 是否一致
+npm run check:i18n     # 檢查所有介面文字的語法、繁中與英文的 key 是否一致
 ```
 
 - `npm run build` 的型別檢查會擋下「英文少了某個 key」。
@@ -175,7 +175,7 @@ docs/             部署、使用、建置文件
 4. **`frontend/src/api.ts`**：加型別和呼叫函式。
 5. **元件**：在 `components/` 裡使用。
 6. **`frontend/src/locales/`**：所有顯示文字都放這裡，`zh` 和 `en` 兩邊都要加。英文少了 key 時，型別檢查會失敗。
-7. **檢查**：執行 `npm run build` 和 `npx tsx scripts/check-i18n.ts`，然後用 mock 主機操作一次。動到 TRex 行為的功能，請在真的 TRex 上再測一次，mock 測不出 TRex client 的實際回傳格式。
+7. **檢查**：執行 `npm run build` 和 `npm run check:i18n`，然後用 mock 主機操作一次。動到 TRex 行為的功能，請在真的 TRex 上再測一次，mock 測不出 TRex client 的實際回傳格式。
 
 設計時的規則：
 - **會對 TRex 多發請求的功能，預設關閉**，做成選項讓使用者自己開啟，並加上警語，因為每個請求都由 TRex 的 master 執行緒處理。不會多發請求的功能才預設顯示。
@@ -186,9 +186,11 @@ docs/             部署、使用、建置文件
 
 ## 7. 測試
 
-目前沒有自動化測試套件，驗證方式是：
+測試的用法見 [tests/README.md](../tests/README.md)：
 
-- **型別檢查與介面文字**：`npm run build`、`npx tsx scripts/check-i18n.ts`。
-- **mock 主機**：所有畫面和流程都能在 mock 主機上操作。
-- **真的 TRex**：兩個 port 對接成 loopback（直接對接，或在交換器上放進同一個獨立 VLAN），用 GUI 的 API 送流並比對統計。
+- **型別檢查與介面文字**：`npm run build`、`npm run check:i18n`。
+- **後端 API 測試**（`tests/backend`，pytest）：涵蓋所有 API，可以對 mock 主機跑，也可以對接成 loopback 的真 TRex 跑。
+- **瀏覽器端對端測試**（`tests/e2e`，Playwright）：用 mock 主機逐一操作每個畫面，中英文都檢查，任何主控台錯誤都算失敗。
+- **GitHub Actions**：每次 push 和 PR 會自動跑上面三項中用 mock 的部分（`.github/workflows/test.yml`）。
+- **真的 TRex**：要先接好 loopback，請手動跑後端測試；動到 TRex 行為的修改，送出前請在實機上跑一次。
 - **效能影響**：`bench/` 裡的腳本，見 [bench/README.md](../bench/README.md)。

@@ -15,6 +15,8 @@ dependencies = [
 # Mock hosts build packets with pip's Scapy. Real TRex hosts use the Scapy
 # bundled with TRex, so this is not part of the deploy bundle.
 mock = ["scapy>=2.6,<2.7"]
+# For tests/backend (pytest against a mock host or a real TRex).
+test = ["pytest>=8", "httpx>=0.27"]
 
 [project.scripts]
 trex-gui = "trex_gui.__main__:main"
